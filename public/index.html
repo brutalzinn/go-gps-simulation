@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>GPS Simulation</title>
+    <script src="https://maps.googleapis.com/maps/api/js?key={{.GoogleMapsAPIKey}}&libraries=places"></script>
+    <script>
+        let map;
+        let markers = [];
+        let defaultDevice = "{{.DefaultDevice}}";
+
+        function initMap() {
+            map = new google.maps.Map(document.getElementById('map'), {
+                center: { lat: -34.397, lng: 150.644 },
+                zoom: 8
+            });
+
+            const input = document.getElementById('searchInput');
+            const searchBox = new google.maps.places.SearchBox(input);
+            map.controls[google.maps.ControlPosition.TOP_LEFT].push(input);
+
+            map.addListener('bounds_changed', function () {
+                searchBox.setBounds(map.getBounds());
+            });
+
+            searchBox.addListener('places_changed', function () {
+                const places = searchBox.getPlaces();
+                if (places.length == 0) {
+                    return;
+                }
+
+                places.forEach(function (place) {
+                    if (!place.geometry || !place.geometry.location) {
+                        console.log("Returned place contains no geometry");
+                        return;
+                    }
+
+                    addMarker(place.geometry.location);
+                });
+            });
+
+            map.addListener('click', function (event) {
+                addMarker(event.latLng);
+            });
+
+            fetchDevices();
+        }
+
+        function addMarker(location) {
+            if (markers.length >= 2) {
+                alert("Only two points allowed");
+                return;
+            }
+            let marker = new google.maps.Marker({
+                position: location,
+                map: map
+            });
+            markers.push(marker);
+        }
+
+        function fetchDevices() {
+            fetch('/devices')
+                .then(response => response.json())
+                .then(devices => {
+                    const deviceSelect = document.getElementById('deviceSelect');
+                    devices.forEach(device => {
+                        let option = document.createElement('option');
+                        option.value = device;
+                        option.text = device;
+                        deviceSelect.appendChild(option);
+                    });
+                });
+        }
+
+        function simulateRoute() {
+            if (markers.length !== 2) {
+                alert("Please select two points");
+                return;
+            }
+            const deviceSelect = document.getElementById('deviceSelect');
+            const selectedDevice = deviceSelect.value;
+            if (!selectedDevice) {
+                alert("Please select a device");
+                return;
+            }
+
+            let pointA = markers[0].getPosition();
+            let pointB = markers[1].getPosition();
+            fetch('/update', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    pointA: { lat: pointA.lat(), lng: pointA.lng() },
+                    pointB: { lat: pointB.lat(), lng: pointB.lng() },
+                    device: selectedDevice
+                })
+            }).then(response => response.text())
+                .then(data => alert(data));
+        }
+    </script>
+    <style>
+        #map {
+            height: 500px;
+            width: 100%;
+        }
+
+        #searchInput,
+        #deviceSelect {
+            width: 300px;
+            margin-top: 10px;
+            padding: 5px;
+        }
+    </style>
+</head>
+
+<body onload="initMap()">
+    <h1>GPS Simulation</h1>
+    <input id="searchInput" class="controls" type="text" placeholder="Search for a place">
+    <select id="deviceSelect" class="controls">
+        <option value="" disabled selected>Select device</option>
+    </select>
+    <div id="map"></div>
+    <button onclick="simulateRoute()">Simulate Route</button>
+</body>
+
+</html>
