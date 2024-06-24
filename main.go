@@ -21,9 +21,9 @@ func main() {
 		logrus.Fatalf("Error loading config: %v", err)
 	}
 	adbHelper = adbhelper.New(config.AdbPath)
-	app.Static("/", "./public")
+	// app.Static("/", "./public")
 	app.Get("/", func(c *fiber.Ctx) error {
-		return c.Render("index", fiber.Map{
+		return c.Render("templates/index.html", fiber.Map{
 			"GoogleMapsAPIKey": config.GoogleMapsAPIKey,
 			"DefaultDevice":    config.DefaultDevice,
 		})
