@@ -2,3 +2,4 @@ config.yml
 **debug**
 downloads
 .vscode
+.DS_Store
